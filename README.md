@@ -1,0 +1,2 @@
+# ConfigSanitizer
+Nettoyeur de configuration
