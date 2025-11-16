@@ -131,12 +131,14 @@ def _anonymize_string(text: str, seed: str) -> str:
         fake_email = _generate_fake_email(email, seed)
         result = result.replace(email, fake_email)
     
-    # Replace IPv4 addresses
+    # Replace IPv4 addresses (except network masks and special IPs)
     ipv4_pattern = SENSITIVE_PATTERNS["ipv4"]
     ips = ipv4_pattern.findall(result)
     for ip in ips:
-        fake_ip = _generate_fake_ip(ip, seed)
-        result = result.replace(ip, fake_ip)
+        # Skip network masks and special IPs like 0.0.0.0
+        if not _is_network_mask_or_special_ip(ip):
+            fake_ip = _generate_fake_ip(ip, seed)
+            result = result.replace(ip, fake_ip)
     
     # Replace password-like patterns
     password_pattern = SENSITIVE_PATTERNS["password"]
@@ -159,6 +161,19 @@ def _generate_fake_email(original: str, seed: str) -> str:
     """Generate a deterministic fake email based on the original."""
     hash_value = hashlib.md5(f"{original}{seed}".encode()).hexdigest()[:8]
     return f"user{hash_value}@example.com"
+
+
+def _is_network_mask_or_special_ip(ip: str) -> bool:
+    """Check if an IP is a network mask or special IP that should not be anonymized."""
+    # Check for 0.0.0.0
+    if ip == "0.0.0.0":
+        return True
+    
+    # Check for network masks (IPs starting with 255)
+    if ip.startswith("255."):
+        return True
+    
+    return False
 
 
 def _generate_fake_ip(original: str, seed: str) -> str:

@@ -141,3 +141,30 @@ class TestAnonymize:
         assert "config" in result
         assert len(result["users"]) == 2
         assert result["config"]["port"] == 8080
+    
+    def test_anonymize_preserves_network_masks(self):
+        """Test that network masks are not anonymized."""
+        text = "netmask=255.255.255.0"
+        result = anonymize(text)
+        assert "255.255.255.0" in result
+        
+        text2 = "mask=255.255.255.255"
+        result2 = anonymize(text2)
+        assert "255.255.255.255" in result2
+        
+        text3 = "subnet=255.255.0.0"
+        result3 = anonymize(text3)
+        assert "255.255.0.0" in result3
+    
+    def test_anonymize_preserves_zero_ip(self):
+        """Test that 0.0.0.0 IP is not anonymized."""
+        text = "bind=0.0.0.0"
+        result = anonymize(text)
+        assert "0.0.0.0" in result
+    
+    def test_anonymize_normal_ips_still_works(self):
+        """Test that normal IPs are still anonymized."""
+        text = "server=192.168.1.1"
+        result = anonymize(text)
+        assert "192.168.1.1" not in result
+        assert "10." in result
