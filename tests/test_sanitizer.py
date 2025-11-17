@@ -168,3 +168,16 @@ class TestAnonymize:
         result = anonymize(text)
         assert "192.168.1.1" not in result
         assert "10." in result
+
+    def test_anonymize_generates_valid_ipv4(self):
+        """Anonymized IPs must be valid IPv4 addresses (each octet 0-255)."""
+        text = "server=123.45.67.89"
+        result = anonymize(text)
+        import re
+        m = re.search(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", result)
+        assert m, "No IP found in anonymized result"
+        ip = m.group(0)
+        parts = ip.split('.')
+        assert len(parts) == 4
+        for p in parts:
+            assert 0 <= int(p) <= 255

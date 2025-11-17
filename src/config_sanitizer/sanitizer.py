@@ -138,7 +138,8 @@ def _anonymize_string(text: str, seed: str) -> str:
         # Skip network masks and special IPs like 0.0.0.0
         if not _is_network_mask_or_special_ip(ip):
             fake_ip = _generate_fake_ip(ip, seed)
-            result = result.replace(ip, fake_ip)
+            # Replace only whole-word occurrences to avoid accidental partial replacements
+            result = re.sub(r'\b' + re.escape(ip) + r'\b', fake_ip, result)
     
     # Replace password-like patterns
     password_pattern = SENSITIVE_PATTERNS["password"]
@@ -179,10 +180,38 @@ def _is_network_mask_or_special_ip(ip: str) -> bool:
 def _generate_fake_ip(original: str, seed: str) -> str:
     """Generate a deterministic fake IP address."""
     hash_value = hashlib.md5(f"{original}{seed}".encode()).hexdigest()
-    octets = [str(int(hash_value[i:i+2], 16) % 256) for i in range(0, 8, 2)]
-    # Ensure it's in private IP range 10.x.x.x
+    # Build four octets from the hash (each 0-255). Use first octet 10 to keep private range.
+    octets = []
+    for i in range(0, 8, 2):
+        try:
+            val = int(hash_value[i:i+2], 16) % 256
+        except ValueError:
+            val = 0
+        octets.append(str(val))
     octets[0] = "10"
-    return ".".join(octets)
+    candidate = ".".join(octets)
+    if _is_valid_ipv4(candidate):
+        return candidate
+
+    # Fallback: construct from a larger int slice to be extra-safe
+    int_val = int(hash_value[:8], 16)
+    nums = [str((int_val >> shift) & 0xFF) for shift in (24, 16, 8, 0)]
+    nums[0] = "10"
+    return ".".join(nums)
+
+
+def _is_valid_ipv4(ip: str) -> bool:
+    """Return True if `ip` is a valid IPv4 address (4 octets, each 0-255)."""
+    parts = ip.split('.')
+    if len(parts) != 4:
+        return False
+    try:
+        for p in parts:
+            if not 0 <= int(p) <= 255:
+                return False
+    except ValueError:
+        return False
+    return True
 
 
 def _generate_fake_password(original: str, seed: str) -> str:
