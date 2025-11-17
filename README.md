@@ -45,6 +45,19 @@ config-sanitizer sanitize config.json -o output.json --mask-char X
 
 ```bash
 # Anonymize a JSON file
+```
+
+### Run without installing
+
+If you don't want to install the package (`pip install -e .`), you can run the CLI directly from the repository root using the provided wrapper:
+
+```bash
+python run.py sanitize config.json -o config_sanitized.json
+# or
+python run.py anonymize config.json -o config_anonymized.json --seed my-seed
+```
+
+This script adds `src/` to `PYTHONPATH` at runtime so the `config_sanitizer` package can be imported without installation.
 config-sanitizer anonymize config.json -o config_anonymized.json
 
 # Anonymize with custom seed for deterministic results
